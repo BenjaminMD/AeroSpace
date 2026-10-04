@@ -63,3 +63,22 @@ final class FocusAfterWindowRemovalTest: XCTestCase {
         assertEquals(previousFocusedWindowOrNil, previous)
     }
 }
+
+@MainActor
+final class FocusAfterFloatingRemovalTest: XCTestCase {
+    override func setUp() async throws { setUpWorkspacesForTests() }
+
+    func testClosedFloatingWindowReturnsToVisibleWorkspaceElsewhere() {
+        let here = Workspace.get(byName: name)
+        let elsewhere = Workspace.get(byName: "b")
+        let previous = TestWindow.new(id: 1, parent: elsewhere.rootTilingContainer)
+        TestWindow.new(id: 2, parent: here.rootTilingContainer)
+        // Only `here` is visible in tests (single test monitor), so `previous` must not be chosen
+        let resolved = resolveFocusAfterWindowRemoval(wasFocused: true, previousWindow: previous, workspace: here, removedWasFloating: true)
+        assertEquals(resolved.workspace, here)
+        // Same workspace: chosen regardless
+        let sameWorkspace = TestWindow.new(id: 3, parent: here.rootTilingContainer)
+        let resolved2 = resolveFocusAfterWindowRemoval(wasFocused: true, previousWindow: sameWorkspace, workspace: here, removedWasFloating: true)
+        assertEquals(resolved2.windowOrNil, sameWorkspace)
+    }
+}

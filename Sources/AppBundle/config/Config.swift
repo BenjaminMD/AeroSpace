@@ -47,6 +47,7 @@ struct Config: ConvenienceMutable {
     var accordionPadding: Int = 30
     var autoBalanceOnClose: Bool = false // Fork addition
     var loneWindowMaxWidth: Int = 0 // Fork addition. 0 = disabled
+    var returnFocusAfterCopyFrom: [String] = [] // Fork addition. App bundle ids, see returnFocusAfterCopy.swift
     var enableNormalizationOppositeOrientationForNestedContainers: Bool = true
     var persistentWorkspaces: OrderedSet<String> = []
     var execOnWorkspaceChange: [String] = [] // todo deprecate

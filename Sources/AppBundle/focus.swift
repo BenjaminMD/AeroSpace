@@ -63,11 +63,15 @@ private struct FrozenFocus: AeroAny, Equatable, Sendable {
 /// Fork (upstream PR #2201): after closing the focused window, go back to the previously focused window if it's on the
 /// same workspace, instead of the workspace's most recent window. Windows of hidden apps don't qualify
 @MainActor
-func resolveFocusAfterWindowRemoval(wasFocused: Bool, previousWindow: Window?, workspace: Workspace) -> LiveFocus {
-    if wasFocused, let previousWindow, previousWindow.visualWorkspace == workspace,
-       previousWindow.parent is TilingContainer || previousWindow.isFloating
+func resolveFocusAfterWindowRemoval(wasFocused: Bool, previousWindow: Window?, workspace: Workspace, removedWasFloating: Bool = false) -> LiveFocus {
+    if wasFocused, let previousWindow, previousWindow.parent is TilingContainer || previousWindow.isFloating,
+       let previousWorkspace = previousWindow.visualWorkspace
     {
-        return LiveFocus(windowOrNil: previousWindow, workspace: workspace)
+        // A closed floating window (a utility like Passwords, possibly sticky on another monitor) was a detour:
+        // go back to where you came from, even if it's on another monitor
+        if previousWorkspace == workspace || removedWasFloating && previousWorkspace.isVisible {
+            return LiveFocus(windowOrNil: previousWindow, workspace: previousWorkspace)
+        }
     }
     return workspace.toLiveFocus()
 }

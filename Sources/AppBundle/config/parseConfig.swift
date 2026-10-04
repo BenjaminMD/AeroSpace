@@ -148,6 +148,7 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     "accordion-padding": Parser(\.accordionPadding, parseInt),
     "auto-balance-on-close": Parser(\.autoBalanceOnClose, parseBool),
     "lone-window-max-width": Parser(\.loneWindowMaxWidth, parseInt),
+    "return-focus-after-copy-from": Parser(\.returnFocusAfterCopyFrom, parseArrayOfStrings),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
     "exec-on-workspace-change": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
     "exec": Parser(\.execConfig, parseExecConfig),

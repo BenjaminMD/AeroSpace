@@ -33,6 +33,11 @@ auto-balance-on-close = false
 # Handy on ultrawide monitors. 0 disables the feature
 lone-window-max-width = 0
 
+# (befahl fork) App bundle ids. While one of these apps is frontmost, copying something to the clipboard returns the
+# focus to the previously focused window. Password managers hold Secure Input while frontmost, which blocks all
+# hotkeys; this gets you out right after copying a password. Example: ['com.apple.Passwords']
+return-focus-after-copy-from = []
+
 # Possible values: tiles|accordion
 default-root-container-layout = 'tiles'
 

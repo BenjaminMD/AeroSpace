@@ -80,6 +80,7 @@ final class MacWindow: Window {
     @MainActor
     func garbageCollect(skipClosedWindowsCache: Bool) {
         let wasFocused = focus.windowOrNil == self // Fork (upstream PR #2201). Must precede allWindowsMap removal
+        let wasFloating = isFloating
         if MacWindow.allWindowsMap.removeValue(forKey: windowId) == nil {
             return
         }
@@ -101,6 +102,7 @@ final class MacWindow: Window {
                         wasFocused: wasFocused,
                         previousWindow: previousFocusedWindowOrNil,
                         workspace: deadWindowWorkspace,
+                        removedWasFloating: wasFloating,
                     )
                     _ = setFocus(to: deadWindowFocus)
                     // Guard against "Apple Reminders popup" bug: https://github.com/nikitabobko/AeroSpace/issues/201
