@@ -28,6 +28,17 @@ final class StickyAndLockCommandTest: XCTestCase {
         assertEquals(window.nodeWorkspace?.name, "b")
     }
 
+    func testStickyWindowDoesNotBecomeFocusFallback() {
+        let a = Workspace.get(byName: "a")
+        let tiled = TestWindow.new(id: 1, parent: a.rootTilingContainer)
+        _ = tiled.focusWindow()
+        let sticky = TestWindow.new(id: 2, parent: Workspace.get(byName: "b").floatingWindowsContainer)
+        sticky.isSticky = true
+        moveStickyWindowsToVisibleWorkspaces()
+        assertEquals(sticky.nodeWorkspace, a)
+        assertEquals(a.mostRecentWindowRecursive, tiled)
+    }
+
     func testLockedWindowRefusesCommands() async {
         Workspace.get(byName: name).rootTilingContainer.apply {
             TestWindow.new(id: 1, parent: $0)

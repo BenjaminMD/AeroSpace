@@ -19,7 +19,9 @@ func moveStickyWindowsToVisibleWorkspaces() {
     for workspace in Workspace.all where !workspace.isVisible && !workspace.isScratchpad {
         for window in workspace.floatingWindows where window.isSticky {
             let target = workspace.workspaceMonitor.activeWorkspace
+            let targetMostRecent = target.mostRecentWindowRecursive
             window.bindAsFloatingWindow(to: target)
+            targetMostRecent?.markAsMostRecentChild() // bind() marks the sticky window. It mustn't become the focus fallback
             (window as? MacWindow)?.unhideFromCorner()
         }
     }

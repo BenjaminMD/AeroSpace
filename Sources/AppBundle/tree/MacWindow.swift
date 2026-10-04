@@ -32,7 +32,9 @@ final class MacWindow: Window {
         // atomic synchronous section
         if let existing = allWindowsMap[windowId] { return existing }
         let window = MacWindow(windowId, macApp, lastFloatingSize: rect?.size, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+        window.isAwaitingOnWindowDetected = true // Fork (upstream PR #2220)
         allWindowsMap[windowId] = window
+        defer { window.isAwaitingOnWindowDetected = false }
 
         try await debugWindowsIfRecording(window, .cancellable)
         if try await !restoreClosedWindowsCacheIfNeeded(newlyDetectedWindow: window) {
@@ -77,6 +79,7 @@ final class MacWindow: Window {
     //                        If you are unsure, it's better to pass `false`
     @MainActor
     func garbageCollect(skipClosedWindowsCache: Bool) {
+        let wasFocused = focus.windowOrNil == self // Fork (upstream PR #2201). Must precede allWindowsMap removal
         if MacWindow.allWindowsMap.removeValue(forKey: windowId) == nil {
             return
         }
@@ -94,7 +97,11 @@ final class MacWindow: Window {
         {
             switch parent.cases {
                 case .tilingContainer, .floatingWindowsContainer, .macosHiddenAppsWindowsContainer, .macosFullscreenWindowsContainer:
-                    let deadWindowFocus = deadWindowWorkspace.toLiveFocus()
+                    let deadWindowFocus = resolveFocusAfterWindowRemoval(
+                        wasFocused: wasFocused,
+                        previousWindow: previousFocusedWindowOrNil,
+                        workspace: deadWindowWorkspace,
+                    )
                     _ = setFocus(to: deadWindowFocus)
                     // Guard against "Apple Reminders popup" bug: https://github.com/nikitabobko/AeroSpace/issues/201
                     if focus.windowOrNil?.app.pid != app.pid {
@@ -180,8 +187,13 @@ final class MacWindow: Window {
                 newY = newY.coerce(in: workspaceRect.minY ... max(workspaceRect.minY, workspaceRect.maxY - windowHeight))
 
                 setAxFrame(CGPoint(x: newX, y: newY), nil)
+            case .tiling, .rootTilingContainer:
+                break // layoutRecursive moves tiling windows out of the corner right after this call
             case .macosNativeFullscreenWindow, .macosNativeHiddenAppWindow, .macosNativeMinimizedWindow,
-                 .macosPopupWindow, .tiling, .rootTilingContainer, .shimContainerRelation: break
+                 .macosPopupWindow, .shimContainerRelation:
+                // Fork (upstream #642, d1875): keep the hidden state until the window is back in its previous parent.
+                // Otherwise e.g. a cmd-h'd floating window stays in the corner forever after it's unhidden
+                return
         }
 
         self.prevUnhiddenProportionalPositionInsideWorkspaceRect = nil

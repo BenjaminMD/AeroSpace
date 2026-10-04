@@ -15,7 +15,7 @@ import Common
 @MainActor
 private func getStubWorkspace(forPoint point: CGPoint) -> Workspace {
     if let prev = screenPointToPrevVisibleWorkspace[point].map({ Workspace.get(byName: $0) }),
-       !prev.isVisible && prev.workspaceMonitor.rect.topLeftCorner == point && prev.forceAssignedMonitor == nil
+       !prev.isVisible && !prev.isScratchpad && prev.workspaceMonitor.rect.topLeftCorner == point && prev.forceAssignedMonitor == nil
     {
         return prev
     }
@@ -116,14 +116,20 @@ extension Workspace {
 extension MonitorInfo {
     @MainActor
     var activeWorkspace: Workspace {
-        if let existing = screenPointToVisibleWorkspace[rect.topLeftCorner] {
+        let point = rect.topLeftCorner
+        if let existing = screenPointToVisibleWorkspace[point] {
             return existing
         }
         // What if monitor configuration changed? (frame.origin is changed)
         rearrangeWorkspacesOnMonitors()
-        // Normally, recursion should happen only once more because we must take the value from the cache
-        // (Unless, monitor configuration data race happens)
-        return self.activeWorkspace
+        if let existing = screenPointToVisibleWorkspace[point] { return existing }
+        // Fork (upstream d2197/d2262): `self` is a snapshot from before a display change. Its rect is immutable, so
+        // recursing would miss forever (stack overflow on undock/lid open). Use the closest live monitor instead
+        if let closest = screenPointToVisibleWorkspace.keys.minBy({ ($0 - point).vectorLength }) {
+            return screenPointToVisibleWorkspace[closest].orDie()
+        }
+        // No live monitors at all. Don't register the stale point
+        return getStubWorkspace(forPoint: point)
     }
 
     @MainActor

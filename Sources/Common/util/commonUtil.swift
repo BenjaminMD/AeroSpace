@@ -148,7 +148,7 @@ public func check(
     }
 }
 
-public var isUnitTest: Bool { NSClassFromString("XCTestCase") != nil }
+public let isUnitTest: Bool = NSClassFromString("XCTestCase") != nil // Fork (upstream PR #2232): evaluated once
 
 extension CaseIterable where Self: RawRepresentable, RawValue == String {
     public static var cliArgsCases: [String] { allCases.map(\.rawValue) }

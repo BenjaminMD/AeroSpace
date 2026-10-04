@@ -60,6 +60,18 @@ private struct FrozenFocus: AeroAny, Equatable, Sendable {
 /// AEROSPACE_WORKSPACE env before accessing the global focus.
 @MainActor var focus: LiveFocus { _focus.live }
 
+/// Fork (upstream PR #2201): after closing the focused window, go back to the previously focused window if it's on the
+/// same workspace, instead of the workspace's most recent window. Windows of hidden apps don't qualify
+@MainActor
+func resolveFocusAfterWindowRemoval(wasFocused: Bool, previousWindow: Window?, workspace: Workspace) -> LiveFocus {
+    if wasFocused, let previousWindow, previousWindow.visualWorkspace == workspace,
+       previousWindow.parent is TilingContainer || previousWindow.isFloating
+    {
+        return LiveFocus(windowOrNil: previousWindow, workspace: workspace)
+    }
+    return workspace.toLiveFocus()
+}
+
 @MainActor func setFocus(to newFocus: LiveFocus) -> Bool {
     if _focus == newFocus.frozen { return true }
     let oldFocus = focus
@@ -115,6 +127,9 @@ extension Workspace {
 // Used by focus-back-and-forth
 @MainActor private var _prevFocus: FrozenFocus? = nil
 @MainActor var prevFocus: LiveFocus? { _prevFocus?.live.takeIf { $0 != focus } }
+@MainActor var previousFocusedWindowOrNil: Window? {
+    _prevFocus?.windowId.flatMap { Window.get(byId: $0) }
+}
 
 @MainActor private var onFocusChangedRecursionGuard = false
 // Should be called in refreshSession
