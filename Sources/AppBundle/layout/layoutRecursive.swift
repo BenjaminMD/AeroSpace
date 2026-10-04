@@ -88,11 +88,36 @@ extension Window {
             newY = newY.coerce(in: workspaceRect.minY ... max(workspaceRect.minY, workspaceRect.maxY - windowHeight))
 
             setAxFrame(CGPoint(x: newX, y: newY), nil)
+        } else if let windowRect, windowId != currentlyManipulatedWithMouseWindowId, !isLeftMouseButtonDown {
+            keepFloatingWindowOnItsMonitor(windowRect, workspace.workspaceMonitor)
         }
         if isFullscreen {
             layoutFullscreen(context)
             isFullscreen = false
         }
+    }
+
+    /// Fork addition. Apps that resize their own floating windows (mpv fits the window to every image it loads) grow
+    /// them into the neighbouring monitor. Shift such a window back inside its monitor, and shrink it if it doesn't
+    /// fit. Bleeding off-screen (into no monitor) is left alone: that's the user's business
+    @MainActor
+    private func keepFloatingWindowOnItsMonitor(_ rect: Rect, _ monitor: MonitorInfo) {
+        let minBleed: CGFloat = 4
+        let bleedsIntoAnotherMonitor = monitorInfos.contains { other in
+            other.rect.topLeftCorner != monitor.rect.topLeftCorner &&
+                min(rect.maxX, other.rect.maxX) - max(rect.minX, other.rect.minX) >= minBleed &&
+                min(rect.maxY, other.rect.maxY) - max(rect.minY, other.rect.minY) >= minBleed
+        }
+        if !bleedsIntoAnotherMonitor { return }
+        let bounds = monitor.visibleRect
+        let width = min(rect.width, bounds.width)
+        let height = min(rect.height, bounds.height)
+        let topLeft = CGPoint(
+            x: rect.minX.coerce(in: bounds.minX ... bounds.maxX - width),
+            y: rect.minY.coerce(in: bounds.minY ... bounds.maxY - height),
+        )
+        let fits = width == rect.width && height == rect.height
+        setAxFrame(topLeft, fits ? nil : CGSize(width: width, height: height))
     }
 
     @MainActor
