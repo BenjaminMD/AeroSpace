@@ -6,6 +6,10 @@ import Common
 @MainActor private var screenPointToPrevVisibleWorkspace: [CGPoint: String] = [:]
 @MainActor private var screenPointToVisibleWorkspace: [CGPoint: Workspace] = [:]
 @MainActor private var visibleWorkspaceToScreenPoint: [Workspace: CGPoint] = [:]
+/// Fork addition. The workspace each monitor (by name) showed last. Monitor points change on display reconfiguration
+/// (e.g. the built-in becomes the main display at (0, 0) when undocked), names don't. Used by
+/// rearrangeWorkspacesOnMonitors, so that a reconnected monitor shows the workspace it showed before it was gone
+@MainActor private var lastVisibleWorkspaceByMonitorName: [String: String] = [:]
 
 // The returned workspace must be invisible and it must belong to the requested monitor
 @MainActor func getStubWorkspace(for monitor: MonitorInfo) -> Workspace {
@@ -164,6 +168,9 @@ extension CGPoint {
         visibleWorkspaceToScreenPoint[workspace] = self
         screenPointToVisibleWorkspace[self] = workspace
         workspace.assignedMonitorPoint = self
+        if !isUnitTest, let name = monitorInfos.first(where: { $0.rect.topLeftCorner == self })?.name {
+            lastVisibleWorkspaceByMonitorName[name] = workspace.name
+        }
         return true
     }
 }
@@ -187,8 +194,18 @@ private func rearrangeWorkspacesOnMonitors() {
     screenPointToVisibleWorkspace = [:]
     visibleWorkspaceToScreenPoint = [:]
 
-    for newScreen in newScreens {
+    // Fork: first give every monitor the workspace it showed last (by name), then fall back to upstream's mapping by
+    // proximity of the monitor points
+    for monitor in monitorInfos where !isUnitTest {
+        guard let name = lastVisibleWorkspaceByMonitorName[monitor.name] else { continue }
+        let workspace = Workspace.get(byName: name)
+        if workspace.isScratchpad || visibleWorkspaceToScreenPoint[workspace] != nil { continue }
+        _ = monitor.rect.topLeftCorner.setActiveWorkspace(workspace)
+    }
+
+    for newScreen in newScreens where screenPointToVisibleWorkspace[newScreen] == nil {
         if let existingVisibleWorkspace = newScreenToOldScreenMapping[newScreen].flatMap({ oldScreenPointToVisibleWorkspace[$0] }),
+           visibleWorkspaceToScreenPoint[existingVisibleWorkspace] == nil,
            newScreen.setActiveWorkspace(existingVisibleWorkspace)
         {
             continue
