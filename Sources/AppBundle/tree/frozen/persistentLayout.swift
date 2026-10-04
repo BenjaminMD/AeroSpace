@@ -28,6 +28,8 @@ private struct PersistedLayout: Codable, Equatable {
 private struct PersistedMonitor: Codable, Equatable {
     let topLeftCorner: CGPoint
     let visibleWorkspace: String
+    /// Matched first on restore: monitor points shift when the display arrangement changes, names don't
+    let name: String?
 }
 
 private struct PersistedWorkspace: Codable, Equatable {
@@ -91,7 +93,9 @@ func persistLayoutIfChanged() {
     let layout = PersistedLayout(
         bootSession: currentBootSession,
         workspaces: Workspace.all.map(PersistedWorkspace.init),
-        monitors: monitorInfos.map { PersistedMonitor(topLeftCorner: $0.rect.topLeftCorner, visibleWorkspace: $0.activeWorkspace.name) },
+        monitors: monitorInfos.map {
+            PersistedMonitor(topLeftCorner: $0.rect.topLeftCorner, visibleWorkspace: $0.activeWorkspace.name, name: $0.name)
+        },
     )
     if layout == lastPersistedLayout { return }
     let encoder = JSONEncoder()
@@ -205,11 +209,11 @@ private func restore(_ layout: PersistedLayout) async throws -> Bool {
         restoredAnything = true
     }
 
-    let topLeftCornerToMonitor = monitorInfos.grouped { $0.rect.topLeftCorner }
+    let liveMonitors = monitorInfos
     for monitor in layout.monitors where monitor.visibleWorkspace != scratchpadWorkspaceName {
-        _ = topLeftCornerToMonitor[monitor.topLeftCorner]?
-            .singleOrNil()?
-            .setActiveWorkspace(Workspace.get(byName: monitor.visibleWorkspace))
+        let byName = monitor.name.flatMap { name in liveMonitors.filter { $0.name == name }.singleOrNil() }
+        let byPoint = liveMonitors.filter { $0.rect.topLeftCorner == monitor.topLeftCorner }.singleOrNil()
+        _ = (byName ?? byPoint)?.setActiveWorkspace(Workspace.get(byName: monitor.visibleWorkspace))
     }
 
     // The focus still points to the startup placement. If the focused window was moved to a workspace that isn't
