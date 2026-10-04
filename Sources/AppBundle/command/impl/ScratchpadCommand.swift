@@ -20,6 +20,13 @@ struct ScratchpadCommand: Command {
                 if let it = args.widthPercent { scratchpadRevealFraction.width = CGFloat(it) / 100 }
                 if let it = args.heightPercent { scratchpadRevealFraction.height = CGFloat(it) / 100 }
                 let workspace = nonScratchpadWorkspace(target.workspace)
+                if let appId = args.appId {
+                    switch toggleAppScratchpad(appId: appId, on: workspace, focused: target.windowOrNil) {
+                        case .stashed: return .succ
+                        case .focus(let window): return .from(bool: window.focusWindow())
+                        case nil: return .fail(io.err("No window of '\(appId)'"))
+                    }
+                }
                 guard let next = toggleScratchpad(on: workspace, focused: target.windowOrNil) else { return .succ }
                 return .from(bool: next.focusWindow())
         }

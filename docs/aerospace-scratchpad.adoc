@@ -10,7 +10,7 @@ include::util/man-attributes.adoc[]
 [verse]
 // tag::synopsis[]
 aerospace scratchpad [-h|--help] stash [--window-id <window-id>]
-aerospace scratchpad [-h|--help] toggle [--width <percent>] [--height <percent>]
+aerospace scratchpad [-h|--help] toggle [--width <percent>] [--height <percent>] [--app-id <app-bundle-id>]
 
 // end::synopsis[]
 
@@ -34,6 +34,16 @@ and the menu bar.
 floating, centered, and sized relative to the monitor.
 Repeated presses cycle through all stashed windows
 
+With `--app-id`, `toggle` acts on that app's window only, independent of the queue
+(like i3's `[app_id=...] scratchpad show`): a focused window of the app is stashed,
+an unfocused one on the focused workspace is focused, otherwise it's revealed on the focused workspace.
+If the app has no window, the command fails, so a binding can launch the app:
+
+[source,toml]
+----
+alt-t = 'scratchpad toggle --app-id com.mitchellh.ghostty || exec-and-forget open -b com.mitchellh.ghostty'
+----
+
 A stashed window that gets focused from outside of AeroSpace (notification click, app launcher, `cmd-tab`)
 is pulled onto the focused workspace instead of switching to the hidden workspace.
 
@@ -50,6 +60,8 @@ The value is remembered for subsequent reveals.
 
 --height <percent>:: Height of the revealed window relative to the monitor. Default: 78.
 The value is remembered for subsequent reveals.
+
+--app-id <app-bundle-id>:: Toggle the window of this app only. See above
 
 // end::body[]
 

@@ -8,6 +8,7 @@ public struct ScratchpadCmdArgs: CmdArgs {
             "--window-id": windowIdSubArgParser(),
             "--width": singleValueSubArgParser(\.widthPercent, "<percent>", parsePercent),
             "--height": singleValueSubArgParser(\.heightPercent, "<percent>", parsePercent),
+            "--app-id": singleValueSubArgParser(\.appId, "<app-bundle-id>") { .success($0) },
         ],
         posArgs: [newMandatoryPosArgParser(\.action, parseScratchpadAction, placeholder: "(stash|toggle)")],
     )
@@ -15,6 +16,7 @@ public struct ScratchpadCmdArgs: CmdArgs {
     public var action: Lateinit<ScratchpadAction> = .uninitialized
     public var widthPercent: Int? = nil
     public var heightPercent: Int? = nil
+    public var appId: String? = nil
 }
 
 public enum ScratchpadAction: String, CaseIterable, Sendable {
@@ -36,6 +38,9 @@ func parseScratchpadCmdArgs(_ args: StrArrSlice) -> ParsedCmd<ScratchpadCmdArgs>
     parseSpecificCmdArgs(ScratchpadCmdArgs(rawArgs: args), args)
         .filter("--width and --height are only compatible with 'toggle'") {
             ($0.widthPercent == nil && $0.heightPercent == nil) || $0.action.val == .toggle
+        }
+        .filter("--app-id is only compatible with 'toggle'") {
+            $0.appId == nil || $0.action.val == .toggle
         }
         .filter("--window-id is only compatible with 'stash'") {
             $0.windowId == nil || $0.action.val == .stash

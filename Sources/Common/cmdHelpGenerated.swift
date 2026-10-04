@@ -155,7 +155,7 @@ let run_callback_help_generated = """
     """
 let scratchpad_help_generated = """
     USAGE: scratchpad [-h|--help] stash [--window-id <window-id>]
-       OR: scratchpad [-h|--help] toggle [--width <percent>] [--height <percent>]
+       OR: scratchpad [-h|--help] toggle [--width <percent>] [--height <percent>] [--app-id <app-bundle-id>]
     """
 let split_help_generated = """
     USAGE: split [-h|--help] [--window-id <window-id>] (horizontal|vertical|opposite)

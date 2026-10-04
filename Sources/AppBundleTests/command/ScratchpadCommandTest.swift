@@ -150,3 +150,28 @@ final class ScratchpadFocusTest: XCTestCase {
         XCTAssertFalse(Workspace.get(byName: scratchpadWorkspaceName).isVisible)
     }
 }
+
+@MainActor
+final class AppScratchpadTest: XCTestCase {
+    override func setUp() async throws { setUpWorkspacesForTests() }
+
+    func testAppToggleRevealsStashesAndFailsWithoutWindows() async {
+        let a = Workspace.get(byName: "a")
+        a.rootTilingContainer.apply { _ = TestWindow.new(id: 1, parent: $0).focusWindow() }
+        let other = TestWindow.new(id: 2, parent: Workspace.get(byName: "b").rootTilingContainer)
+        let appId = TestApp.shared.rawAppBundleId!
+
+        // Focused window belongs to the app -> stashed
+        await parseCommand("scratchpad toggle --app-id \(appId)").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(Window.get(byId: 1)?.nodeWorkspace?.isScratchpad, true)
+
+        // Not focused, stashed -> revealed on the focused workspace and focused
+        await parseCommand("scratchpad toggle --app-id \(appId)").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.windowOrNil?.nodeWorkspace, a)
+        XCTAssertTrue(focus.windowOrNil?.isFloating == true)
+        _ = other
+
+        let result = await parseCommand("scratchpad toggle --app-id com.example.none").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        XCTAssertNotEqual(result.exitCode.rawValue, 0)
+    }
+}

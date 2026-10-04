@@ -86,7 +86,7 @@ aerospace -h;
     | sticky [--window-id <window_id>] [[--fail-if-noop] (on|off)]
 
     | scratchpad stash [--window-id <window_id>]
-    | scratchpad toggle [--width <percent>] [--height <percent>]
+    | scratchpad toggle [--width <percent>] [--height <percent>] [--app-id <app_bundle_id>]
 
     | split [--window-id <window_id>] (horizontal|vertical|opposite) [--window-id <window_id>]
 

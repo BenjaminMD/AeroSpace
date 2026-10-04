@@ -102,3 +102,33 @@ func nonScratchpadWorkspace(_ workspace: Workspace) -> Workspace {
     if !active.isScratchpad { return active }
     return Workspace.all.first { $0.isVisible && !$0.isScratchpad } ?? mainMonitorInfo.activeWorkspace
 }
+
+/// Fork addition. `scratchpad toggle --app-id <id>`: i3 `[app_id=...] scratchpad show` for one app, independent of the
+/// stash queue. Returns nil if the app has no window (so that a binding can launch it with `||`)
+/// - The app's window is focused: stash it
+/// - It's on the focused workspace, but not focused: focus it
+/// - Otherwise (stashed, or on another workspace): reveal it on the focused workspace, floating and centered
+@MainActor
+func toggleAppScratchpad(appId: String, on workspace: Workspace, focused: Window?) -> AppScratchpadResult? {
+    let windows = Workspace.all.flatMap { $0.allLeafWindowsRecursive }.filter { $0.app.rawAppBundleId == appId }
+    if let focused, windows.contains(focused) {
+        if focused.isLocked { return .focus(focused) }
+        stashToScratchpad(focused)
+        return .stashed
+    }
+    // Prefer the window that is already here, then the most recently revealed one, then any
+    let candidate = windows.first { $0.nodeWorkspace == workspace }
+        ?? windows.first { revealedScratchpadWindowIds.contains($0.windowId) }
+        ?? windows.first { $0.nodeWorkspace?.isScratchpad == true }
+        ?? windows.first
+    guard let candidate else { return nil }
+    if candidate.nodeWorkspace != workspace && !candidate.isLocked {
+        revealFromScratchpad(candidate, on: workspace)
+    }
+    return .focus(candidate)
+}
+
+enum AppScratchpadResult {
+    case stashed
+    case focus(Window)
+}
