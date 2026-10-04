@@ -19,7 +19,7 @@ struct ScratchpadCommand: Command {
             case .toggle:
                 if let it = args.widthPercent { scratchpadRevealFraction.width = CGFloat(it) / 100 }
                 if let it = args.heightPercent { scratchpadRevealFraction.height = CGFloat(it) / 100 }
-                let workspace = target.workspace.isScratchpad ? target.workspace.workspaceMonitor.activeWorkspace : target.workspace
+                let workspace = nonScratchpadWorkspace(target.workspace)
                 guard let next = toggleScratchpad(on: workspace, focused: target.windowOrNil) else { return .succ }
                 return .from(bool: next.focusWindow())
         }

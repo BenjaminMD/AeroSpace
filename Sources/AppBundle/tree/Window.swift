@@ -17,6 +17,7 @@ open class Window: TreeNode, Hashable {
     var isSticky: Bool = false
     var isLocked: Bool = false
     var lockedFrame: Rect? = nil
+    var lockSnapBackCount: Int = 0
     var floatingFrameBeforeFullscreen: Rect? = nil // See floatingFullscreen.swift
 
     @MainActor

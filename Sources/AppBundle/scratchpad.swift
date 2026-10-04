@@ -68,7 +68,8 @@ func revealFromScratchpad(_ window: Window, on workspace: Workspace) {
 func toggleScratchpad(on workspace: Workspace, focused: Window?) -> Window? {
     let revealed = revealedScratchpadWindows()
     if let focused, revealed.contains(focused) {
-        for window in revealed {
+        if focused.isLocked { return focused } // A locked window stays where it is
+        for window in revealed where !window.isLocked {
             stashToScratchpad(window)
         }
         return nil
@@ -84,11 +85,20 @@ func toggleScratchpad(on workspace: Workspace, focused: Window?) -> Window? {
     return next
 }
 
-/// Hook for native focus changes. A stashed window focused from outside of AeroSpace (notification click, app
-/// launcher, cmd-tab) is pulled onto the focused workspace instead of letting the focus switch to the hidden workspace
+/// Called by Window.focusWindow(). A stashed window that gets focused (native focus from a notification click, app
+/// launcher or cmd-tab; `focus --window-id`) is revealed on the focused workspace instead of making the hidden
+/// scratchpad workspace visible
 @MainActor
-func pullScratchpadWindowIfNativelyFocused(_ nativeFocused: Window) {
-    guard nativeFocused.nodeWorkspace?.isScratchpad == true else { return }
-    let target = focus.workspace.isScratchpad ? focus.workspace.workspaceMonitor.activeWorkspace : focus.workspace
-    revealFromScratchpad(nativeFocused, on: target)
+func pullFromScratchpadIfStashed(_ window: Window) {
+    guard window.nodeWorkspace?.isScratchpad == true else { return }
+    revealFromScratchpad(window, on: nonScratchpadWorkspace(focus.workspace))
+}
+
+/// The scratchpad must never become visible. Falls back to a visible workspace
+@MainActor
+func nonScratchpadWorkspace(_ workspace: Workspace) -> Workspace {
+    if !workspace.isScratchpad { return workspace }
+    let active = workspace.workspaceMonitor.activeWorkspace
+    if !active.isScratchpad { return active }
+    return Workspace.all.first { $0.isVisible && !$0.isScratchpad } ?? mainMonitorInfo.activeWorkspace
 }

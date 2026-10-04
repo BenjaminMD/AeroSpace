@@ -34,8 +34,31 @@ extension Window {
         guard isLocked, let lockedFrame, let actual else { return false }
         let drift = abs(actual.topLeftX - lockedFrame.topLeftX) + abs(actual.topLeftY - lockedFrame.topLeftY) +
             abs(actual.width - lockedFrame.width) + abs(actual.height - lockedFrame.height)
-        if drift < 2 { return false }
+        if drift < 2 {
+            lockSnapBackCount = 0
+            return false
+        }
+        // The workspace moved to another monitor, or the monitor arrangement changed: re-pin where the window is now
+        if let monitor = nodeWorkspace?.workspaceMonitor, !monitor.rect.contains(lockedFrame.center) {
+            repin(actual)
+            return false
+        }
+        // Mouse drags always snap back. An app that insists on its own frame (mpv fits the window to every image)
+        // would fight forever: accept its frame after two attempts
+        if !isLeftMouseButtonDown {
+            if lockSnapBackCount >= 2 {
+                repin(actual)
+                return false
+            }
+            lockSnapBackCount += 1
+        }
         setAxFrame(lockedFrame.topLeftCorner, CGSize(width: lockedFrame.width, height: lockedFrame.height))
         return true
+    }
+
+    @MainActor
+    private func repin(_ frame: Rect) {
+        lockedFrame = frame
+        lockSnapBackCount = 0
     }
 }

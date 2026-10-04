@@ -16,6 +16,9 @@ struct JoinWithCommand: Command {
             return .fail(io.err("No windows in the specified direction"))
         }
         let joinWithTarget = parent.children[ownIndex + direction.focusOffset]
+        if let locked = joinWithTarget.allLeafWindowsRecursive.first(where: \.isLocked) { // Fork
+            return .fail(io.err(windowIsLockedMsg(locked)))
+        }
         let prevBinding = joinWithTarget.unbindFromParent()
         let newParent = TilingContainer(
             parent: parent,

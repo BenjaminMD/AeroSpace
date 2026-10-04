@@ -47,6 +47,7 @@ struct SwapCommand: Command {
         guard let targetWindow else {
             return .fail
         }
+        if targetWindow.isLocked { return .fail(io.err(windowIsLockedMsg(targetWindow))) } // Fork
 
         swapWindows(mruDominant: currentWindow, targetWindow)
 

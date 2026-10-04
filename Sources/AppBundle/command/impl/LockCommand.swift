@@ -20,6 +20,10 @@ struct LockCommand: Command {
                             "Tip: use --fail-if-noop to exit with non-zero exit code"))
             }
         }
+        if newState && ((window as? MacWindow)?.isHiddenInCorner == true || window.nodeWorkspace?.isScratchpad == true) {
+            // Its current frame is the hide corner. Pinning it there would make the window unreachable
+            return .fail(io.err("Window '\(window.windowId)' is hidden. Show it before locking it"))
+        }
         // Floating windows are pinned to their current frame. Tiled windows are pinned by refusing commands
         window.lockedFrame = newState && window.isFloating ? try? await window.getAxRect(.nonCancellable) : nil
         window.isLocked = newState

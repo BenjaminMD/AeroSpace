@@ -24,10 +24,15 @@ aerospace lock [-h|--help] [--window-id <window-id>] [--fail-if-noop] off
 Commands that would move, resize, re-layout, close or stash a locked window fail instead:
 `move`, `swap`, `resize`, `move-node-to-workspace`, `move-node-to-monitor`, `join-with`, `split`, `layout`,
 `fullscreen`, `macos-native-fullscreen`, `macos-native-minimize`, `close`, `scratchpad stash`.
-`close-all-windows-but-current` skips locked windows.
+`close-all-windows-but-current` skips locked windows, and `scratchpad toggle` doesn't send them back.
+Commands that would move a locked window indirectly fail as well: `swap` onto it, `join-with` it.
+Dragging a tiled window with the mouse doesn't swap it with a locked window.
+Hidden windows (on an invisible workspace, or in the scratchpad) can't be locked.
 
 A locked floating window is pinned to the frame it had when it was locked.
-Mouse drags and resizes initiated by the app snap back.
+Mouse drags snap back. If the app itself keeps changing the frame (e.g. mpv fitting every image),
+its frame is accepted after two attempts.
+If the workspace ends up on another monitor, the window is re-pinned where it is.
 A locked tiled window can't be manipulated directly, but its tile still adapts when its neighbours change.
 A locked sticky window keeps following the visible workspace with a fixed frame.
 

@@ -132,3 +132,21 @@ final class ScratchpadCommandTest: XCTestCase {
 private func scratchpadWindowIds() -> [UInt32] {
     Workspace.get(byName: scratchpadWorkspaceName).allLeafWindowsRecursive.map(\.windowId)
 }
+
+@MainActor
+final class ScratchpadFocusTest: XCTestCase {
+    override func setUp() async throws { setUpWorkspacesForTests() }
+
+    func testFocusingStashedWindowRevealsItInsteadOfShowingScratchpad() async {
+        let workspace = Workspace.get(byName: "a")
+        workspace.rootTilingContainer.apply {
+            _ = TestWindow.new(id: 1, parent: $0).focusWindow()
+            TestWindow.new(id: 2, parent: $0)
+        }
+        await parseCommand("scratchpad stash --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        await parseCommand("focus --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(focus.windowOrNil?.windowId, 2)
+        assertEquals(focus.workspace, workspace)
+        XCTAssertFalse(Workspace.get(byName: scratchpadWorkspaceName).isVisible)
+    }
+}

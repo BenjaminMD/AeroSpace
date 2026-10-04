@@ -88,6 +88,7 @@ func resolveFocusAfterWindowRemoval(wasFocused: Bool, previousWindow: Window?, w
 }
 extension Window {
     @MainActor func focusWindow() -> Bool {
+        pullFromScratchpadIfStashed(self) // Fork: never make the scratchpad visible
         if let focus = toLiveFocusOrNil() {
             return setFocus(to: focus)
         } else {

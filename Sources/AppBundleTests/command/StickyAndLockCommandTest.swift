@@ -70,3 +70,20 @@ final class StickyAndLockCommandTest: XCTestCase {
         assertEquals(Workspace.get(byName: name).allLeafWindowsRecursive.map(\.windowId).sorted(), [1, 3])
     }
 }
+
+@MainActor
+final class LockIndirectTest: XCTestCase {
+    override func setUp() async throws { setUpWorkspacesForTests() }
+
+    func testCantSwapOrJoinWithLockedNeighbour() async {
+        let root = Workspace.get(byName: name).rootTilingContainer.apply {
+            TestWindow.new(id: 1, parent: $0).isLocked = true
+            _ = TestWindow.new(id: 2, parent: $0).focusWindow()
+        }
+        var result = await parseCommand("swap left").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        XCTAssertNotEqual(result.exitCode.rawValue, 0)
+        result = await parseCommand("join-with left").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        XCTAssertNotEqual(result.exitCode.rawValue, 0)
+        assertEquals(root.layoutDescription, .h_tiles([.window(1), .window(2)]))
+    }
+}
