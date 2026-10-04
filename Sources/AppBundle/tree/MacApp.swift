@@ -264,11 +264,15 @@ final class MacApp: AbstractApp {
                 await app.destroy()
             }
         }
+        let onScreenWindowIds = getOnScreenWindowIds()
         return try await withThrowingTaskGroup(of: (pid_t, [UInt32]).self, returning: [MacApp: [UInt32]].self) { group in
             func refreshTheApp(_ nsApp: NSRunningApplication) {
                 group.addTask { @Sendable @MainActor in
                     guard let app = try await MacApp.getOrRegister(nsApp) else { return (nsApp.processIdentifier, []) }
-                    return (nsApp.processIdentifier, try await app.refreshAndGetAliveWindowIds(frontmostAppBundleId: frontmostAppBundleId))
+                    return (nsApp.processIdentifier, try await app.refreshAndGetAliveWindowIds(
+                        frontmostAppBundleId: frontmostAppBundleId,
+                        onScreenWindowIds: onScreenWindowIds,
+                    ))
                 }
             }
             // Register new apps
@@ -297,7 +301,7 @@ final class MacApp: AbstractApp {
         }
     }
 
-    private func refreshAndGetAliveWindowIds(frontmostAppBundleId: String?) async throws -> [UInt32] {
+    private func refreshAndGetAliveWindowIds(frontmostAppBundleId: String?, onScreenWindowIds: Set<UInt32>?) async throws -> [UInt32] {
         if nsApp.isTerminated {
             await destroy()
             return []
@@ -306,6 +310,7 @@ final class MacApp: AbstractApp {
         let (alive, dead) = try await thread.runInLoop(.cancellable) { [nsApp, windows, axApp] (job) -> ([UInt32], [UInt32]) in
             var alive: [UInt32: AxWindow] = windows.threadGuarded
             var dead = [UInt32: AxWindow]()
+            let listedWindows = axApp.threadGuarded.get(Ax.windowsAttr) ?? []
             // Second line of defence against lock screen. See the first line of defence: closedWindowsCache
             // Second and third lines of defence are technically needed only to avoid potential flickering
             if frontmostAppBundleId != lockScreenAppBundleId {
@@ -313,9 +318,10 @@ final class MacApp: AbstractApp {
                     try job.checkCancellation()
                     return $0.value.ax.containingWindowId() != nil
                 }
+                try collectGhostWindows(&alive, &dead, listedWindows, onScreenWindowIds, nsApp, job)
             }
 
-            for (id, window) in axApp.threadGuarded.get(Ax.windowsAttr) ?? [] {
+            for (id, window) in listedWindows {
                 try job.checkCancellation()
                 try alive.getOrRegisterAxWindow(windowId: id, window, nsApp, job)
             }
@@ -359,9 +365,53 @@ final class MacApp: AbstractApp {
     }
 }
 
+/// Ghost windows: the app closed the window but kept the NSWindow around (Mail does it all the time), or the
+/// close notification was missed. The cached AX element still resolves to a window id, so the
+/// `containingWindowId() != nil` liveness check passes forever and the window keeps an empty tiling slot.
+///
+/// A window is a ghost when the app no longer lists it in kAXWindowsAttribute AND the window server doesn't show it
+/// on screen AND it isn't legitimately invisible (minimized, native fullscreen, app hidden). kAXWindowsAttribute
+/// omits windows on inactive macOS Spaces, hence the extra conditions. Windows hidden in the corner by AeroSpace
+/// stay on screen (1px), so they are never affected. Two consecutive strikes are required to ride out transient
+/// states (open/close animations). A false positive is harmless: the window is re-registered as soon as it shows up
+/// in kAXWindowsAttribute again.
+private func collectGhostWindows(
+    _ alive: inout [UInt32: AxWindow],
+    _ dead: inout [UInt32: AxWindow],
+    _ listedWindows: [WindowIdAndAxUiElement],
+    _ onScreenWindowIds: Set<UInt32>?,
+    _ nsApp: NSRunningApplication,
+    _ job: RunLoopJob,
+) throws {
+    guard let onScreenWindowIds, !nsApp.isHidden else { return }
+    let listedIds = listedWindows.map(\.windowId).toSet()
+    for (id, window) in alive {
+        try job.checkCancellation()
+        if listedIds.contains(id) || onScreenWindowIds.contains(id) ||
+            window.ax.get(Ax.minimizedAttr) == true || window.ax.get(Ax.isFullscreenAttr) == true
+        {
+            window.ghostStrikes = 0
+            continue
+        }
+        window.ghostStrikes += 1
+        if window.ghostStrikes >= 2 {
+            alive.removeValue(forKey: id)
+            dead[id] = window
+        }
+    }
+}
+
+/// nil if the window server can't be queried. Ghost collection is skipped then
+private func getOnScreenWindowIds() -> Set<UInt32>? {
+    let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)
+    guard let infos = CGWindowListCopyWindowInfo(options, CGWindowID(0)) as? [NSDictionary] else { return nil }
+    return infos.compactMap { ($0[kCGWindowNumber] as? NSNumber)?.uint32Value }.toSet()
+}
+
 private final class AxWindow {
     let windowId: UInt32
     let ax: AXUIElement
+    var ghostStrikes = 0 // See collectGhostWindows
     // periphery:ignore
     private let axSubscriptions: [AxSubscription] // keep subscriptions in memory
 
