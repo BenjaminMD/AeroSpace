@@ -123,7 +123,9 @@ func refreshModel_nonCancellable() async {
 @MainActor
 private func refresh() async throws {
     // Garbage collect terminated apps and windows before working with all windows
-    let mapping = try await MacApp.refreshAllAndGetAliveWindowIds(frontmostAppBundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
+    // Fork: while the system is suspended (sleep, lock, screens off), behave as if the lock screen were frontmost
+    let frontmostAppBundleId = SystemSuspend.isActive ? lockScreenAppBundleId : NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+    let mapping = try await MacApp.refreshAllAndGetAliveWindowIds(frontmostAppBundleId: frontmostAppBundleId)
     let aliveWindowIds = mapping.values.flatMap(id).toSet()
 
     for window in MacWindow.allWindows {

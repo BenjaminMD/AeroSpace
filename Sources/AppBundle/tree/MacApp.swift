@@ -151,8 +151,7 @@ final class MacApp: AbstractApp {
         setFrameJobs.removeValue(forKey: windowId)?.cancel()
         setFrameJobs[windowId] = withWindowAsync(windowId, .cancellable) { [axApp] window, job in
             try disableAnimations(app: axApp.threadGuarded, job) {
-                try setFrame(window, topLeft, size, job)
-                if let bounds, let topLeft { try keepInside(window, topLeft, bounds, job) }
+                try setFrame(window, topLeft, size, job, keepingInside: bounds)
             }
         }
     }
@@ -265,15 +264,11 @@ final class MacApp: AbstractApp {
                 await app.destroy()
             }
         }
-        let onScreenWindowIds = getOnScreenWindowIds()
-        return try await withThrowingTaskGroup(of: (pid_t, [UInt32]).self, returning: [MacApp: [UInt32]].self) { group in
+        let refreshed = try await withThrowingTaskGroup(of: (pid_t, AliveAndGhostSuspects).self, returning: [MacApp: AliveAndGhostSuspects].self) { group in
             func refreshTheApp(_ nsApp: NSRunningApplication) {
                 group.addTask { @Sendable @MainActor in
-                    guard let app = try await MacApp.getOrRegister(nsApp) else { return (nsApp.processIdentifier, []) }
-                    return (nsApp.processIdentifier, try await app.refreshAndGetAliveWindowIds(
-                        frontmostAppBundleId: frontmostAppBundleId,
-                        onScreenWindowIds: onScreenWindowIds,
-                    ))
+                    guard let app = try await MacApp.getOrRegister(nsApp) else { return (nsApp.processIdentifier, AliveAndGhostSuspects(alive: [], ghostSuspects: [])) }
+                    return (nsApp.processIdentifier, try await app.refreshAndGetAliveWindowIds(frontmostAppBundleId: frontmostAppBundleId))
                 }
             }
             // Register new apps
@@ -292,26 +287,44 @@ final class MacApp: AbstractApp {
                     refreshTheApp(app.nsApp)
                 }
             }
-            var result: [MacApp: [UInt32]] = [:]
-            for try await (pid, windowIds) in group {
+            var result: [MacApp: AliveAndGhostSuspects] = [:]
+            for try await (pid, data) in group {
                 if let app = MacApp.allAppsMap[pid] {
-                    result[app] = windowIds
+                    result[app] = data
                 }
             }
             return result
         }
+        let ghosts = resolveGhostWindows(refreshed.mapValues(\.ghostSuspects).filter { !$0.value.isEmpty })
+        var result: [MacApp: [UInt32]] = [:]
+        for (app, data) in refreshed {
+            let appGhosts = data.ghostSuspects.filter { ghosts.contains($0) }
+            if !appGhosts.isEmpty { await app.forgetAxWindows(appGhosts) }
+            result[app] = data.alive.filter { !ghosts.contains($0) }
+        }
+        return result
     }
 
-    private func refreshAndGetAliveWindowIds(frontmostAppBundleId: String?, onScreenWindowIds: Set<UInt32>?) async throws -> [UInt32] {
+    /// Fork addition. See resolveGhostWindows
+    private func forgetAxWindows(_ windowIds: [UInt32]) async {
+        _ = try? await thread?.runInLoop(.nonCancellable) { [windows] _ in
+            for id in windowIds { windows.threadGuarded.removeValue(forKey: id) }
+        }
+        for id in windowIds { setFrameJobs.removeValue(forKey: id)?.cancel() }
+    }
+
+    private func refreshAndGetAliveWindowIds(frontmostAppBundleId: String?) async throws -> AliveAndGhostSuspects {
         if nsApp.isTerminated {
             await destroy()
-            return []
+            return AliveAndGhostSuspects(alive: [], ghostSuspects: [])
         }
-        guard let thread else { return [] }
-        let (alive, dead) = try await thread.runInLoop(.cancellable) { [nsApp, windows, axApp] (job) -> ([UInt32], [UInt32]) in
+        guard let thread else { return AliveAndGhostSuspects(alive: [], ghostSuspects: []) }
+        let (alive, dead, ghostSuspects) = try await thread.runInLoop(.cancellable) { [nsApp, windows, axApp] (job) -> ([UInt32], [UInt32], [UInt32]) in
             var alive: [UInt32: AxWindow] = windows.threadGuarded
             var dead = [UInt32: AxWindow]()
-            let listedWindows = axApp.threadGuarded.get(Ax.windowsAttr) ?? []
+            var ghostSuspects: [UInt32] = []
+            // nil means the AX request failed (e.g. the app is busy after wake), not "the app has no windows"
+            let listedWindows = axApp.threadGuarded.get(Ax.windowsAttr)
             // Second line of defence against lock screen. See the first line of defence: closedWindowsCache
             // Second and third lines of defence are technically needed only to avoid potential flickering
             if frontmostAppBundleId != lockScreenAppBundleId {
@@ -319,22 +332,24 @@ final class MacApp: AbstractApp {
                     try job.checkCancellation()
                     return $0.value.ax.containingWindowId() != nil
                 }
-                try collectGhostWindows(&alive, &dead, listedWindows, onScreenWindowIds, nsApp, job)
+                if let listedWindows, !nsApp.isHidden {
+                    ghostSuspects = try findGhostSuspects(alive, listedWindows, job)
+                }
             }
 
-            for (id, window) in listedWindows {
+            for (id, window) in listedWindows ?? [] {
                 try job.checkCancellation()
                 try alive.getOrRegisterAxWindow(windowId: id, window, nsApp, job)
             }
 
             windows.threadGuarded = alive
-            return (Array(alive.keys), Array(dead.keys))
+            return (Array(alive.keys), Array(dead.keys), ghostSuspects)
         }
         windowsCount = alive.count
         for windowId in dead {
             setFrameJobs.removeValue(forKey: windowId)?.cancel()
         }
-        return alive
+        return AliveAndGhostSuspects(alive: alive, ghostSuspects: ghostSuspects)
     }
 
     private func destroy() async {
@@ -366,53 +381,67 @@ final class MacApp: AbstractApp {
     }
 }
 
-/// Ghost windows: the app closed the window but kept the NSWindow around (Mail does it all the time), or the
-/// close notification was missed. The cached AX element still resolves to a window id, so the
-/// `containingWindowId() != nil` liveness check passes forever and the window keeps an empty tiling slot.
-///
-/// A window is a ghost when the app no longer lists it in kAXWindowsAttribute AND the window server doesn't show it
-/// on screen AND it isn't legitimately invisible (minimized, native fullscreen, app hidden). kAXWindowsAttribute
-/// omits windows on inactive macOS Spaces, hence the extra conditions. Windows hidden in the corner by AeroSpace
-/// stay on screen (1px), so they are never affected. Two consecutive strikes are required to ride out transient
-/// states (open/close animations). A false positive is harmless: the window is re-registered as soon as it shows up
-/// in kAXWindowsAttribute again.
-private func collectGhostWindows(
-    _ alive: inout [UInt32: AxWindow],
-    _ dead: inout [UInt32: AxWindow],
-    _ listedWindows: [WindowIdAndAxUiElement],
-    _ onScreenWindowIds: Set<UInt32>?,
-    _ nsApp: NSRunningApplication,
-    _ job: RunLoopJob,
-) throws {
-    guard let onScreenWindowIds, !nsApp.isHidden else { return }
-    let listedIds = listedWindows.map(\.windowId).toSet()
-    for (id, window) in alive {
-        try job.checkCancellation()
-        if listedIds.contains(id) || onScreenWindowIds.contains(id) ||
-            window.ax.get(Ax.minimizedAttr) == true || window.ax.get(Ax.isFullscreenAttr) == true
-        {
-            window.ghostStrikes = 0
-            continue
-        }
-        window.ghostStrikes += 1
-        if window.ghostStrikes >= 2 {
-            alive.removeValue(forKey: id)
-            dead[id] = window
-        }
-    }
+struct AliveAndGhostSuspects: Sendable {
+    let alive: [UInt32]
+    let ghostSuspects: [UInt32]
 }
 
-/// nil if the window server can't be queried. Ghost collection is skipped then
+/// Fork addition. Ghost windows: the app closed the window but kept the NSWindow around (Mail does it all the time),
+/// or the close notification was missed. The cached AX element still resolves to a window id, so the
+/// `containingWindowId() != nil` liveness check passes forever and the window keeps an empty tiling slot.
+///
+/// Phase 1 (app thread): a suspect is a window that the app no longer lists in kAXWindowsAttribute and that isn't
+/// minimized or native fullscreen. Apps whose AX request failed and hidden apps report no suspects.
+private func findGhostSuspects(_ alive: [UInt32: AxWindow], _ listedWindows: [WindowIdAndAxUiElement], _ job: RunLoopJob) throws -> [UInt32] {
+    let listedIds = listedWindows.map(\.windowId).toSet()
+    var result: [UInt32] = []
+    for (id, window) in alive where !listedIds.contains(id) {
+        try job.checkCancellation()
+        if window.ax.get(Ax.minimizedAttr) == true || window.ax.get(Ax.isFullscreenAttr) == true { continue }
+        result.append(id)
+    }
+    return result
+}
+
+@MainActor private var ghostSuspectSince: [UInt32: Date] = [:]
+
+/// Phase 2 (main actor): returns the windows to drop. A suspect is dropped once it has been absent from both the app's
+/// window list and the screen for `minGhostAge`. The whole round is skipped while the system is suspended (sleep, lock,
+/// screens off) and when windows of several apps disappear at once: that's another macOS Space (native fullscreen,
+/// Mission Control), not closed windows. Dropping a live window would re-detect it later on the wrong workspace.
+@MainActor
+private func resolveGhostWindows(_ suspectsByApp: [MacApp: [UInt32]]) -> Set<UInt32> {
+    let minGhostAge: TimeInterval = 3
+    if suspectsByApp.isEmpty || SystemSuspend.isActive {
+        ghostSuspectSince = [:]
+        return []
+    }
+    guard let onScreen = getOnScreenWindowIds() else { return [] }
+    let offScreenByApp = suspectsByApp.mapValues { $0.filter { !onScreen.contains($0) } }.filter { !$0.value.isEmpty }
+    if offScreenByApp.count >= 2 {
+        ghostSuspectSince = [:]
+        return []
+    }
+    let suspects = offScreenByApp.values.flatMap { $0 }.toSet()
+    let now = Date.now
+    ghostSuspectSince = ghostSuspectSince.filter { suspects.contains($0.key) }
+    for id in suspects where ghostSuspectSince[id] == nil {
+        ghostSuspectSince[id] = now
+    }
+    return suspects.filter { id in ghostSuspectSince[id].map { now.timeIntervalSince($0) >= minGhostAge } == true }
+}
+
+/// nil if the window server can't be queried, or reports nothing (displays reconfiguring). Ghost collection is skipped then
 private func getOnScreenWindowIds() -> Set<UInt32>? {
     let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)
     guard let infos = CGWindowListCopyWindowInfo(options, CGWindowID(0)) as? [NSDictionary] else { return nil }
-    return infos.compactMap { ($0[kCGWindowNumber] as? NSNumber)?.uint32Value }.toSet()
+    let ids = infos.compactMap { ($0[kCGWindowNumber] as? NSNumber)?.uint32Value }.toSet()
+    return ids.isEmpty ? nil : ids
 }
 
 private final class AxWindow {
     let windowId: UInt32
     let ax: AXUIElement
-    var ghostStrikes = 0 // See collectGhostWindows
     // periphery:ignore
     private let axSubscriptions: [AxSubscription] // keep subscriptions in memory
 
@@ -459,28 +488,29 @@ private func getAxRect(window: AXUIElement, job: RunLoopJob) throws -> Rect? {
     return Rect(topLeftX: topLeftCorner.x, topLeftY: topLeftCorner.y, width: size.width, height: size.height)
 }
 
-private func setFrame(_ window: AXUIElement, _ topLeft: CGPoint?, _ size: CGSize?, _ job: RunLoopJob) throws {
+private func setFrame(_ window: AXUIElement, _ topLeft: CGPoint?, _ size: CGSize?, _ job: RunLoopJob, keepingInside bounds: CGRect? = nil) throws {
     // Set size and then the position. The order is important https://github.com/nikitabobko/AeroSpace/issues/143
     //                                                        https://github.com/nikitabobko/AeroSpace/issues/335
     if let size { window.set(Ax.sizeAttr, size) }
     try job.checkCancellation()
-    if let topLeft { window.set(Ax.topLeftCornerAttr, topLeft) } else { return }
+    guard var topLeft else { return }
+    // Fork: clamp before moving, so that the window is moved once per layout pass and the position is stable across
+    // passes. Moving it to the tile and then back would emit kAXMovedNotification twice per pass -> refresh loop
+    if let bounds, let actual = window.get(Ax.sizeAttr) { topLeft = clamp(topLeft, actual, bounds) }
+    window.set(Ax.topLeftCornerAttr, topLeft)
     try job.checkCancellation()
     if let size { window.set(Ax.sizeAttr, size) }
 }
 
 /// Fork addition. Apps with a minimum size (Preview, ...) or a fixed aspect ratio ignore a too small tile. The window then
-/// grows to the right/bottom and spills onto the neighbouring monitor. Read the size back and move the window so that it
-/// stays inside `bounds`. It overlaps its tiling neighbours instead. Apps that apply the size asynchronously send
-/// kAXResizedNotification, which triggers another layout, so the check converges
-private func keepInside(_ window: AXUIElement, _ topLeft: CGPoint, _ bounds: CGRect, _ job: RunLoopJob) throws {
-    try job.checkCancellation()
-    guard let actual = window.get(Ax.sizeAttr) else { return }
-    let x = max(bounds.minX, min(topLeft.x, bounds.maxX - actual.width))
-    let y = max(bounds.minY, min(topLeft.y, bounds.maxY - actual.height))
-    if abs(x - topLeft.x) >= 1 || abs(y - topLeft.y) >= 1 {
-        window.set(Ax.topLeftCornerAttr, CGPoint(x: x, y: y))
-    }
+/// grows to the right/bottom and spills onto the neighbouring monitor. Keep it inside `bounds` instead; it overlaps its
+/// tiling neighbours. Apps that apply the size asynchronously send kAXResizedNotification, which triggers another layout
+/// pass, so the position converges
+private func clamp(_ topLeft: CGPoint, _ size: CGSize, _ bounds: CGRect) -> CGPoint {
+    CGPoint(
+        x: max(bounds.minX, min(topLeft.x, bounds.maxX - size.width)),
+        y: max(bounds.minY, min(topLeft.y, bounds.maxY - size.height)),
+    )
 }
 
 // Some undocumented magic
