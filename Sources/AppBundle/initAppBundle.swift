@@ -29,7 +29,7 @@ import Foundation
             layoutWorkspaces: false,
         )
         try await runLightSession(.startup, .forceRun) {
-            smartLayoutAtStartup()
+            if try await !restorePersistedLayoutAtStartup() { smartLayoutAtStartup() }
             _ = await config.afterStartupCommand.run(.defaultEnv, .emptyStdin)
         }
     }
