@@ -43,7 +43,7 @@ private indirect enum PersistedNode: Codable, Equatable {
 
 private struct PersistedWindow: Codable, Equatable {
     let id: UInt32
-    let pid: Int32
+    let pid: Int32? // nil in snapshots written before pids were stored
     let weight: CGFloat
     /// Position of a floating window hidden in the corner, relative to its monitor. Without it, the window would be
     /// stuck in the corner after the restart
@@ -226,7 +226,7 @@ private func restore(_ layout: PersistedLayout) async throws -> Bool {
 extension PersistedWindow {
     /// The live window with the same id, if it still belongs to the same process (window ids can be reused)
     @MainActor var liveWindow: Window? {
-        Window.get(byId: id)?.takeIf { $0.app.pid == pid }
+        Window.get(byId: id)?.takeIf { pid == nil || $0.app.pid == pid }
     }
 }
 
