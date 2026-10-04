@@ -21,13 +21,18 @@ aerospace scratchpad [-h|--help] toggle [--width <percent>] [--height <percent>]
 {manpurpose}
 
 Stashed windows live as floating windows in the hidden `.scratchpad` workspace.
-The workspace is never shown on a monitor and is skipped by `workspace next|prev`.
+The workspace is never shown on a monitor, is skipped by `workspace next|prev`, and is omitted from `list-workspaces`
+and the menu bar.
 
 `stash` moves the window to the scratchpad.
 
-`toggle` sends every revealed scratchpad window back and reveals the next stashed one on the focused workspace:
+`toggle` follows i3's `scratchpad show`:
+
+* If a revealed scratchpad window is focused, it's sent back. Nothing replaces it
+* If a revealed scratchpad window isn't focused, it's focused (and moved to the focused workspace if needed)
+* Otherwise, the least recently shown stashed window is revealed on the focused workspace:
 floating, centered, and sized relative to the monitor.
-If the focused window is the only scratchpad window, it's just sent back (i3-like back and forth).
+Repeated presses cycle through all stashed windows
 
 A stashed window that gets focused from outside of AeroSpace (notification click, app launcher, `cmd-tab`)
 is pulled onto the focused workspace instead of switching to the hidden workspace.

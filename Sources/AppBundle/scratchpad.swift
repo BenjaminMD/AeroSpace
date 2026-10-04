@@ -58,23 +58,27 @@ func revealFromScratchpad(_ window: Window, on workspace: Workspace) {
     revealedScratchpadWindowIds.append(window.windowId)
 }
 
-/// Returns the window that should be focused, or nil if everything was sent back
+/// i3 `scratchpad show` semantics. Returns the window that should be focused, or nil if everything was sent back
+/// - A revealed scratchpad window is focused: send it back. Nothing replaces it
+/// - A revealed window exists, but isn't focused: focus it (summon it from another workspace if needed)
+/// - Nothing is revealed: reveal the least recently shown stashed window. Sent back windows are appended to the end
+///   of the stash, so repeated presses cycle through all of them
 @MainActor
 func toggleScratchpad(on workspace: Workspace, focused: Window?) -> Window? {
     let revealed = revealedScratchpadWindows()
-    let stashed = stashedScratchpadWindows
-    let isFocusedRevealed = focused.map { revealed.contains($0) } ?? false
-    // Only one scratchpad window is visible at a time: send back everything that's out
-    for window in revealed {
-        stashToScratchpad(window)
+    if let focused, revealed.contains(focused) {
+        for window in revealed {
+            stashToScratchpad(window)
+        }
+        return nil
     }
-    if isFocusedRevealed && revealed.count + stashed.count <= 1 {
-        return nil // back and forth
+    if let shown = revealed.first(where: { $0.nodeWorkspace == workspace }) ?? revealed.first {
+        if shown.nodeWorkspace != workspace {
+            revealFromScratchpad(shown, on: workspace)
+        }
+        return shown
     }
-    // Stash order, then the windows that were just sent back. If the focused window was revealed, advance past it.
-    // A revealed but unfocused window (e.g. left on another workspace) is summoned again
-    let candidates = (stashed + revealed).filter { !isFocusedRevealed || $0 != focused }
-    guard let next = candidates.first else { return nil }
+    guard let next = stashedScratchpadWindows.first else { return nil }
     revealFromScratchpad(next, on: workspace)
     return next
 }
