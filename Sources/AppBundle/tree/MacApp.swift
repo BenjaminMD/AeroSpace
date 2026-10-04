@@ -147,11 +147,12 @@ final class MacApp: AbstractApp {
         }
     }
 
-    func setAxFrame(_ windowId: UInt32, _ topLeft: CGPoint?, _ size: CGSize?) {
+    func setAxFrame(_ windowId: UInt32, _ topLeft: CGPoint?, _ size: CGSize?, keepingInside bounds: CGRect? = nil) {
         setFrameJobs.removeValue(forKey: windowId)?.cancel()
         setFrameJobs[windowId] = withWindowAsync(windowId, .cancellable) { [axApp] window, job in
             try disableAnimations(app: axApp.threadGuarded, job) {
                 try setFrame(window, topLeft, size, job)
+                if let bounds, let topLeft { try keepInside(window, topLeft, bounds, job) }
             }
         }
     }
@@ -466,6 +467,20 @@ private func setFrame(_ window: AXUIElement, _ topLeft: CGPoint?, _ size: CGSize
     if let topLeft { window.set(Ax.topLeftCornerAttr, topLeft) } else { return }
     try job.checkCancellation()
     if let size { window.set(Ax.sizeAttr, size) }
+}
+
+/// Fork addition. Apps with a minimum size (Preview, ...) or a fixed aspect ratio ignore a too small tile. The window then
+/// grows to the right/bottom and spills onto the neighbouring monitor. Read the size back and move the window so that it
+/// stays inside `bounds`. It overlaps its tiling neighbours instead. Apps that apply the size asynchronously send
+/// kAXResizedNotification, which triggers another layout, so the check converges
+private func keepInside(_ window: AXUIElement, _ topLeft: CGPoint, _ bounds: CGRect, _ job: RunLoopJob) throws {
+    try job.checkCancellation()
+    guard let actual = window.get(Ax.sizeAttr) else { return }
+    let x = max(bounds.minX, min(topLeft.x, bounds.maxX - actual.width))
+    let y = max(bounds.minY, min(topLeft.y, bounds.maxY - actual.height))
+    if abs(x - topLeft.x) >= 1 || abs(y - topLeft.y) >= 1 {
+        window.set(Ax.topLeftCornerAttr, CGPoint(x: x, y: y))
+    }
 }
 
 // Some undocumented magic

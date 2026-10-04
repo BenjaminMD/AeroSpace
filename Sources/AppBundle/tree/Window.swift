@@ -40,6 +40,9 @@ open class Window: TreeNode, Hashable {
     func getCenter(_ cm: CancellationMode) async throws -> CGPoint? { try await getAxRect(cm)?.center }
 
     func setAxFrame(_ topLeft: CGPoint?, _ size: CGSize?) { die("Not implemented") }
+    /// Fork addition. Like setAxFrame, but if the app refuses the size (minimum size, aspect ratio), the window is moved
+    /// back inside `bounds` instead of spilling onto the neighbouring monitor
+    func setAxFrame(_ topLeft: CGPoint, _ size: CGSize, keepingInside bounds: Rect) { setAxFrame(topLeft, size) }
 }
 
 enum LayoutReason: Equatable {

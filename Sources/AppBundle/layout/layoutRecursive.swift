@@ -37,7 +37,7 @@ extension TreeNode {
                     } else {
                         lastAppliedLayoutPhysicalRect = physicalRect
                         window.isFullscreen = false
-                        window.setAxFrame(point, CGSize(width: width, height: height))
+                        window.setAxFrame(point, CGSize(width: width, height: height), keepingInside: context.workspace.workspaceMonitor.visibleRect)
                     }
                 }
             case .tilingContainer(let container):

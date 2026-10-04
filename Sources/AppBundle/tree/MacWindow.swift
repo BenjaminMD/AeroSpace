@@ -194,6 +194,10 @@ final class MacWindow: Window {
         macApp.setAxFrame(windowId, topLeft, size)
     }
 
+    override func setAxFrame(_ topLeft: CGPoint, _ size: CGSize, keepingInside bounds: Rect) {
+        macApp.setAxFrame(windowId, topLeft, size, keepingInside: CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: bounds.height))
+    }
+
     override func getAxRect(_ cm: CancellationMode) async throws -> Rect? {
         try await macApp.getAxRect(windowId, cm)
     }
