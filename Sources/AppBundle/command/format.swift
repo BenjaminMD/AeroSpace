@@ -158,6 +158,9 @@ extension FormatVar {
                 return switch f {
                     case .windowId: .success(.int(w.window.windowId))
                     case .windowIsFullscreen: .success(.bool(w.window.isFullscreen))
+                    case .windowIsSticky: .success(.bool(w.window.isSticky))
+                    case .windowIsLocked: .success(.bool(w.window.isLocked))
+                    case .windowIsStashed: .success(.bool(w.window.nodeWorkspace?.isScratchpad == true))
                     case .windowTitle: .success(.string(w.title.orDie("Title wasn't prefetched")))
                     case .windowLayout, .windowParentContainerLayout: toLayoutResult(w: w.window)
                 }

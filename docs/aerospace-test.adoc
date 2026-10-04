@@ -51,6 +51,9 @@ include::./util/conditional-interpolation-variables-header.adoc[]
 %{window-id}:: Number. Window unique ID
 %{window-title}:: String. Window title
 %{window-is-fullscreen}:: Boolean. Is window in fullscreen by `aerospace fullscreen` command
+%{window-is-sticky}:: Boolean. Is window sticky (`aerospace sticky`). befahl fork
+%{window-is-locked}:: Boolean. Is window locked (`aerospace lock`). befahl fork
+%{window-is-stashed}:: Boolean. Is window stashed in the scratchpad (`aerospace scratchpad`). befahl fork
 %{window-layout}:: String. An alias for `%{window-parent-container-layout}`
 %{window-parent-container-layout}:: String. The layout (`v_tiles`, `h_tiles`, `v_accordion`, `h_accordion`, `floating`) of the window's parent container.
  
