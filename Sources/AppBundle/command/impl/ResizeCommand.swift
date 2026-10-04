@@ -7,6 +7,7 @@ struct ResizeCommand: Command {
 
     func run(_ env: CmdEnv, _ io: CmdIo) -> BinaryExitCode {
         guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
+        if let window = target.windowOrNil, window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
 
         let candidates = target.windowOrNil?.parentsWithSelf
             .filter { ($0.parent as? TilingContainer)?.layout == .tiles }

@@ -10,6 +10,7 @@ struct ScratchpadCommand: Command {
         switch args.action.val {
             case .stash:
                 guard let window = target.windowOrNil else { return .fail(io.err(noWindowIsFocused)) }
+                if window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
                 if window.nodeWorkspace?.isScratchpad == true {
                     return .succ(io.err("Window '\(window.windowId)' is already in the scratchpad"))
                 }

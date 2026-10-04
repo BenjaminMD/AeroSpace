@@ -97,6 +97,11 @@ let list_workspaces_help_generated = """
        OR: list-workspaces [-h|--help] --all [--format <output-format>] [--count] [--json]
        OR: list-workspaces [-h|--help] --focused [--format <output-format>] [--count] [--json]
     """
+let lock_help_generated = """
+    USAGE: lock [-h|--help] [--window-id <window-id>]
+       OR: lock [-h|--help] [--window-id <window-id>] [--fail-if-noop] on
+       OR: lock [-h|--help] [--window-id <window-id>] [--fail-if-noop] off
+    """
 let macos_native_fullscreen_help_generated = """
     USAGE: macos-native-fullscreen [-h|--help] [--window-id <window-id>]
        OR: macos-native-fullscreen [-h|--help] [--window-id <window-id>] [--fail-if-noop] on
@@ -150,6 +155,11 @@ let scratchpad_help_generated = """
     """
 let split_help_generated = """
     USAGE: split [-h|--help] [--window-id <window-id>] (horizontal|vertical|opposite)
+    """
+let sticky_help_generated = """
+    USAGE: sticky [-h|--help] [--window-id <window-id>]
+       OR: sticky [-h|--help] [--window-id <window-id>] [--fail-if-noop] on
+       OR: sticky [-h|--help] [--window-id <window-id>] [--fail-if-noop] off
     """
 let subscribe_help_generated = """
     USAGE: subscribe [-h|--help] [--all] [--no-send-initial] [<event>...]

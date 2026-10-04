@@ -9,6 +9,7 @@ struct SwapCommand: Command {
         guard let target = args.resolveTargetOrReportError(env, io) else {
             return .fail
         }
+        if let window = target.windowOrNil, window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
 
         guard let currentWindow = target.windowOrNil else {
             return .fail(io.err(noWindowIsFocused))

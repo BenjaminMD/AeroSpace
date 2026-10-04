@@ -15,6 +15,7 @@ struct LayoutCommand: Command {
             }
         }
         guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
+        if !args.root, let window = target.windowOrNil, window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
 
         let node: ConventionalWindowParentCases
         switch args.root ? nil : target.windowOrNil {

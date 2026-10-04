@@ -38,6 +38,7 @@ private let adaptiveWeightBeforeResizeWithMouseKey = TreeNodeUserDataKey<CGFloat
 
 @MainActor
 private func resizeWithMouse(_ window: Window) async throws { // todo cover with tests
+    if window.isLocked { return } // Fork: the next layout pass restores the window
     resetClosedWindowsCache()
     switch window.windowParentCases {
         case .unbound: return

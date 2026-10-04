@@ -1,0 +1,50 @@
+= aerospace-lock(1)
+include::util/man-attributes.adoc[]
+:manname: aerospace-lock
+// tag::purpose[]
+:manpurpose: Protect a window from being moved, resized, re-laid out or closed
+// end::purpose[]
+
+// =========================================================== Synopsis
+== Synopsis
+[verse]
+// tag::synopsis[]
+aerospace lock [-h|--help] [--window-id <window-id>]
+aerospace lock [-h|--help] [--window-id <window-id>] [--fail-if-noop] on
+aerospace lock [-h|--help] [--window-id <window-id>] [--fail-if-noop] off
+
+// end::synopsis[]
+
+// =========================================================== Description
+== Description
+
+// tag::body[]
+{manpurpose}
+
+Commands that would move, resize, re-layout, close or stash a locked window fail instead:
+`move`, `swap`, `resize`, `move-node-to-workspace`, `move-node-to-monitor`, `join-with`, `split`, `layout`,
+`fullscreen`, `macos-native-fullscreen`, `macos-native-minimize`, `close`, `scratchpad stash`.
+`close-all-windows-but-current` skips locked windows.
+
+A locked floating window is pinned to the frame it had when it was locked.
+Mouse drags and resizes initiated by the app snap back.
+A locked tiled window can't be manipulated directly, but its tile still adapts when its neighbours change.
+A locked sticky window keeps following the visible workspace with a fixed frame.
+
+The window's own close button isn't affected (macOS doesn't allow intercepting it).
+Without an argument, the lock state is toggled.
+
+// =========================================================== Options
+include::./util/conditional-options-header.adoc[]
+
+-h, --help:: Print help
+
+--window-id <window-id>::
+include::./util/window-id-flag-desc.adoc[]
+
+--fail-if-noop:: Exit with non-zero exit code if the window is already in the requested state
+
+// end::body[]
+
+// =========================================================== Footer
+include::util/man-footer.adoc[]

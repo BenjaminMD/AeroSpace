@@ -162,6 +162,7 @@ private func layoutWorkspaces() async throws {
         }
         return
     }
+    moveStickyWindowsToVisibleWorkspaces()
     let monitors = monitorInfos
     var monitorToOptimalHideCorner: [CGPoint: OptimalHideCorner] = [:]
     for monitor in monitors {

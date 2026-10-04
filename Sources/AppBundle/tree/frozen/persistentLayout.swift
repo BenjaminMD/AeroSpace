@@ -44,6 +44,9 @@ private struct PersistedWindow: Codable, Equatable {
     /// stuck in the corner after the restart
     let hiddenProportionalPosition: CGPoint?
     let floatingSize: CGSize?
+    let isSticky: Bool?
+    let isLocked: Bool?
+    let lockedFrame: CGRect?
 }
 
 @MainActor private var lastPersistedLayout: PersistedLayout? = nil
@@ -106,6 +109,15 @@ extension PersistedWindow {
         weight = getWeightOrNil(window) ?? 1
         hiddenProportionalPosition = (window as? MacWindow)?.prevUnhiddenProportionalPositionInsideWorkspaceRect
         floatingSize = window.isFloating ? window.lastFloatingSize : nil
+        isSticky = window.isSticky ? true : nil
+        isLocked = window.isLocked ? true : nil
+        lockedFrame = window.lockedFrame.map { CGRect(x: $0.topLeftX, y: $0.topLeftY, width: $0.width, height: $0.height) }
+    }
+
+    @MainActor func applyFlags(to window: Window) {
+        window.isSticky = isSticky == true
+        window.isLocked = isLocked == true
+        window.lockedFrame = lockedFrame.map { Rect(topLeftX: $0.minX, topLeftY: $0.minY, width: $0.width, height: $0.height) }
     }
 }
 
@@ -132,6 +144,7 @@ func restorePersistedLayoutAtStartup() async throws -> Bool {
             guard let window = Window.get(byId: persistedWindow.id) else { continue }
             window.bindAsFloatingWindow(to: workspace)
             if let size = persistedWindow.floatingSize { window.lastFloatingSize = size }
+            persistedWindow.applyFlags(to: window)
             if let position = persistedWindow.hiddenProportionalPosition {
                 (window as? MacWindow)?.prevUnhiddenProportionalPositionInsideWorkspaceRect = position
             }
@@ -175,7 +188,9 @@ private func restoreNode(_ node: PersistedNode, parent: NonLeafTreeNodeObject) {
                 restoreNode(child, parent: container) // Missing windows are skipped, the rest keeps its order
             }
         case .window(let persistedWindow):
-            Window.get(byId: persistedWindow.id)?.bind(to: parent, adaptiveWeight: persistedWindow.weight, index: INDEX_BIND_LAST)
+            guard let window = Window.get(byId: persistedWindow.id) else { return }
+            window.bind(to: parent, adaptiveWeight: persistedWindow.weight, index: INDEX_BIND_LAST)
+            persistedWindow.applyFlags(to: window)
     }
 }
 

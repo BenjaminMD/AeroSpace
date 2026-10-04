@@ -10,6 +10,7 @@ struct MacosNativeMinimizeCommand: Command {
         // resolveTargetOrReportError on already minimized windows will always fail
         // It would be easier if minimized windows were part of the workspace in tree hierarchy
         guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
+        if let window = target.windowOrNil, window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
         guard let window = target.windowOrNil else {
             return .fail(io.err(noWindowIsFocused))
         }

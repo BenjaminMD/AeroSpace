@@ -32,6 +32,7 @@ private func revealedScratchpadWindows() -> [Window] {
 
 @MainActor
 func stashToScratchpad(_ window: Window) {
+    window.isSticky = false
     revealedScratchpadWindowIds.removeAll { $0 == window.windowId }
     window.bindAsFloatingWindow(to: Workspace.get(byName: scratchpadWorkspaceName))
 }

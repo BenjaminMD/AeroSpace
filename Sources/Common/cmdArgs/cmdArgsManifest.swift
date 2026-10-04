@@ -20,6 +20,7 @@ public enum CmdKind: String, CaseIterable, Equatable, Sendable {
     case fullscreen
     case joinWith = "join-with"
     case layout
+    case lock
     case listApps = "list-apps"
     case listExecEnvVars = "list-exec-env-vars"
     case listModes = "list-modes"
@@ -39,6 +40,7 @@ public enum CmdKind: String, CaseIterable, Equatable, Sendable {
     case runCallback = "run-callback"
     case scratchpad
     case split
+    case sticky
     case subscribe
     case summonWorkspace = "summon-workspace"
     case swap
@@ -91,6 +93,8 @@ func initSubcommands() -> [String: any SubCommandParserProtocol] {
                 result[kind.rawValue] = SubCommandParser(JoinWithCmdArgs.init)
             case .layout:
                 result[kind.rawValue] = SubCommandParser(parseLayoutCmdArgs)
+            case .lock:
+                result[kind.rawValue] = SubCommandParser(parseLockCmdArgs)
             case .listApps:
                 result[kind.rawValue] = SubCommandParser(parseListAppsCmdArgs)
             case .listExecEnvVars:
@@ -133,6 +137,8 @@ func initSubcommands() -> [String: any SubCommandParserProtocol] {
                 result[kind.rawValue] = SubCommandParser(parseScratchpadCmdArgs)
             case .split:
                 result[kind.rawValue] = SubCommandParser(parseSplitCmdArgs)
+            case .sticky:
+                result[kind.rawValue] = SubCommandParser(parseStickyCmdArgs)
             case .subscribe:
                 result[kind.rawValue] = SubCommandParser(parseSubscribeCmdArgs)
             case .summonWorkspace:

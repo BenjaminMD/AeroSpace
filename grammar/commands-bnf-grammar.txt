@@ -79,6 +79,10 @@ aerospace -h;
     | run-callback [--for-every-window|--window-id <window_id>]... on-window-detected [--for-every-window|--window-id <window_id>]...
     | run-callback (on-focus-changed|on-focused-monitor-changed)
 
+    | lock [--window-id <window_id>] [[--fail-if-noop] (on|off)]
+
+    | sticky [--window-id <window_id>] [[--fail-if-noop] (on|off)]
+
     | scratchpad stash [--window-id <window_id>]
     | scratchpad toggle [--width <percent>] [--height <percent>]
 

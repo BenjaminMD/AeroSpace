@@ -125,6 +125,13 @@ include::aerospace-layout.adoc[tags=synopsis]
 include::aerospace-layout.adoc[tags=purpose]
 include::aerospace-layout.adoc[tags=body]
 
+== lock
+----
+include::aerospace-lock.adoc[tags=synopsis]
+----
+include::aerospace-lock.adoc[tags=purpose]
+include::aerospace-lock.adoc[tags=body]
+
 == list-apps
 ----
 include::aerospace-list-apps.adoc[tags=synopsis]
@@ -287,6 +294,13 @@ include::aerospace-test-not.adoc[tags=synopsis]
 include::aerospace-test-not.adoc[tags=purpose]
 include::aerospace-test-not.adoc[tags=body]
 
+
+== sticky
+----
+include::aerospace-sticky.adoc[tags=synopsis]
+----
+include::aerospace-sticky.adoc[tags=purpose]
+include::aerospace-sticky.adoc[tags=body]
 
 == summon-workspace
 ----

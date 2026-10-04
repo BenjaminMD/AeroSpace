@@ -25,6 +25,7 @@ func movedObs(_: AXObserver, ax: AXUIElement, notif: CFString, _: UnsafeMutableR
 
 @MainActor
 private func moveWithMouse(_ window: Window) async throws { // todo cover with tests
+    if window.isLocked { return } // Fork: the next layout pass restores the window
     resetClosedWindowsCache()
     switch window.windowParentCases {
         case .floatingWindowsContainer:

@@ -40,6 +40,8 @@ extension CmdArgs {
                 command = JoinWithCommand(args: self as! JoinWithCmdArgs)
             case .layout:
                 command = LayoutCommand(args: self as! LayoutCmdArgs)
+            case .lock:
+                command = LockCommand(args: self as! LockCmdArgs)
             case .listApps:
                 command = ListAppsCommand(args: self as! ListAppsCmdArgs)
             case .listExecEnvVars:
@@ -78,6 +80,8 @@ extension CmdArgs {
                 command = ScratchpadCommand(args: self as! ScratchpadCmdArgs)
             case .split:
                 command = SplitCommand(args: self as! SplitCmdArgs)
+            case .sticky:
+                command = StickyCommand(args: self as! StickyCmdArgs)
             case .subscribe:
                 return .failure("subscribe is not supported in the eval", EXIT_CODE_TWO)
             case .summonWorkspace:

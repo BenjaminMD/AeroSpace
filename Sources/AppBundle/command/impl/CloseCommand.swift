@@ -7,6 +7,7 @@ struct CloseCommand: Command {
 
     func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
         guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
+        if let window = target.windowOrNil, window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
         guard let window = target.windowOrNil else {
             return .fail(io.err("Empty workspace"))
         }

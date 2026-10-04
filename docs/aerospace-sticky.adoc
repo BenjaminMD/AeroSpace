@@ -1,0 +1,44 @@
+= aerospace-sticky(1)
+include::util/man-attributes.adoc[]
+:manname: aerospace-sticky
+// tag::purpose[]
+:manpurpose: Make a window follow the visible workspace of its monitor
+// end::purpose[]
+
+// =========================================================== Synopsis
+== Synopsis
+[verse]
+// tag::synopsis[]
+aerospace sticky [-h|--help] [--window-id <window-id>]
+aerospace sticky [-h|--help] [--window-id <window-id>] [--fail-if-noop] on
+aerospace sticky [-h|--help] [--window-id <window-id>] [--fail-if-noop] off
+
+// end::synopsis[]
+
+// =========================================================== Description
+== Description
+
+// tag::body[]
+{manpurpose}
+
+A sticky window is floating (tiled windows are floated when they become sticky).
+Whenever another workspace becomes visible on its monitor, the sticky window moves along, keeping its position and size.
+Like i3's `sticky enable`.
+
+Stashing a window in the scratchpad makes it non-sticky.
+Without an argument, the sticky state is toggled.
+
+// =========================================================== Options
+include::./util/conditional-options-header.adoc[]
+
+-h, --help:: Print help
+
+--window-id <window-id>::
+include::./util/window-id-flag-desc.adoc[]
+
+--fail-if-noop:: Exit with non-zero exit code if the window is already in the requested state
+
+// end::body[]
+
+// =========================================================== Footer
+include::util/man-footer.adoc[]
