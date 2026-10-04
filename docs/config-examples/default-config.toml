@@ -26,6 +26,13 @@ enable-normalization-opposite-orientation-for-nested-containers = true
 # You can set 0 to disable the padding feature
 accordion-padding = 30
 
+# (befahl fork) When a tiled window closes, give its former siblings equal sizes again
+auto-balance-on-close = false
+
+# (befahl fork) Max width (in points) of a workspace's only tiled window. The window is centered.
+# Handy on ultrawide monitors. 0 disables the feature
+lone-window-max-width = 0
+
 # Possible values: tiles|accordion
 default-root-container-layout = 'tiles'
 

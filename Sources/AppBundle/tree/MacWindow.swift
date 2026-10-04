@@ -82,6 +82,11 @@ final class MacWindow: Window {
         }
         if !skipClosedWindowsCache { cacheClosedWindowIfNeeded() }
         let parent = unbindFromParent().parent
+        if config.autoBalanceOnClose, let parent = parent as? TilingContainer, parent.layout == .tiles {
+            for sibling in parent.children {
+                sibling.setWeight(parent.orientation, 1)
+            }
+        }
         let deadWindowWorkspace = parent.nodeWorkspace
         let focus = focus
         if let deadWindowWorkspace, deadWindowWorkspace == focus.workspace ||

@@ -350,6 +350,10 @@ While in a `v_accordion`, you can navigate the windows using the `focus (up|down
 
 Accordion padding is configurable via `accordion-padding` option.
 
+(befahl fork) `lone-window-max-width = <points>` caps the width of a workspace's only tiled window and centers it,
+which is handy on ultrawide monitors. `auto-balance-on-close = true` gives the siblings of a closed tiled window equal
+sizes again.
+
 [#normalization]
 === Normalization
 

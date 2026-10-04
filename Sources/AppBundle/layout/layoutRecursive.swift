@@ -4,7 +4,11 @@ extension Workspace {
     @MainActor
     func layoutWorkspace() async throws {
         if isEffectivelyEmpty { return }
-        let rect = workspaceMonitor.visibleRectPaddedByOuterGaps
+        var rect = workspaceMonitor.visibleRectPaddedByOuterGaps
+        let maxWidth = CGFloat(config.loneWindowMaxWidth)
+        if maxWidth > 0 && rect.width > maxWidth && rootTilingContainer.allLeafWindowsRecursive.count == 1 {
+            rect = Rect(topLeftX: rect.topLeftX + ((rect.width - maxWidth) / 2).rounded(), topLeftY: rect.topLeftY, width: maxWidth, height: rect.height)
+        }
         // If monitors are aligned vertically and the monitor below has smaller width, then macOS may not allow the
         // window on the upper monitor to take full width. rect.height - 1 resolves this problem
         // But I also faced this problem in monitors horizontal configuration. ¯\_(ツ)_/¯
