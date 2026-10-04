@@ -38,8 +38,8 @@ struct PlaceCommand: Command {
 
 private func resolve(_ size: PlaceSize?, of total: CGFloat) -> CGFloat? {
     switch size {
-        case .points(let points)?: CGFloat(points)
-        case .percent(let percent)?: (total * CGFloat(percent) / 100).rounded()
+        case .points(let points): CGFloat(points)
+        case .percent(let percent): (total * CGFloat(percent) / 100).rounded()
         case nil: nil
     }
 }
