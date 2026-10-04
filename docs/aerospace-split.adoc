@@ -31,8 +31,9 @@ The argument configures orientation of the newly created container.
 
 *If the parent of the focused window contains only a single child* (the window itself), then `split` command changes the orientation of the parent container
 
-IMPORTANT: `split` command has no effect if `enable-normalization-flatten-containers` is turned on.
-Consider using `join-with` if you want to keep `enable-normalization-flatten-containers` enabled
+If `enable-normalization-flatten-containers` is turned on, the new single-window container is exempt from flattening
+while its window stays focused, so the next window opens inside it (i3-like pre-split).
+It's flattened as soon as the focus moves away before a second window joins.
 
 // =========================================================== Options
 include::util/conditional-options-header.adoc[]

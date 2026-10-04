@@ -5,6 +5,10 @@ final class TilingContainer: TreeNode, NonLeafTreeNodeObject { // todo consider 
     fileprivate var _orientation: Orientation
     var orientation: Orientation { _orientation }
     var layout: Layout
+    /// Fork addition. Container created by `split` while flatten normalization is enabled. It holds the single window
+    /// it was split from and is exempt from flattening while that window stays focused, so that the next window
+    /// opens inside it (i3 pre-split). Disarmed once it has 2+ children, or flattened once the focus moves away
+    var isArmedSplit: Bool = false
 
     @MainActor
     init(parent: NonLeafTreeNodeObject, adaptiveWeight: CGFloat, _ orientation: Orientation, _ layout: Layout, index: Int) {

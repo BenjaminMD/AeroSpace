@@ -9,6 +9,12 @@ extension Workspace {
 
 extension TilingContainer {
     @MainActor fileprivate func unbindEmptyAndAutoFlatten() {
+        if isArmedSplit {
+            // See isArmedSplit
+            let isHoldingFocusedWindow = children.singleOrNil().map { $0 is Window && $0 == focus.windowOrNil } ?? false
+            if children.count == 1 && isHoldingFocusedWindow { return }
+            isArmedSplit = false
+        }
         if let child = children.singleOrNil(), config.enableNormalizationFlattenContainers && (child is TilingContainer || !isRootContainer) {
             child.unbindFromParent()
             let mru = parent?.mostRecentChild
