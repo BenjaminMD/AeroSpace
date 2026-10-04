@@ -40,6 +40,9 @@ on, off::
 `on` means enter fullscreen mode. `off` means exit fullscreen mode.
 Toggle between the two if not specified
 
+(befahl fork) On a floating window, `fullscreen` toggles between filling the monitor (the window stays floating)
+and the frame it had before.
+
 // end::body[]
 
 // =========================================================== Footer

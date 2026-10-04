@@ -12,6 +12,7 @@ open class Window: TreeNode, Hashable {
     var isSticky: Bool = false
     var isLocked: Bool = false
     var lockedFrame: Rect? = nil
+    var floatingFrameBeforeFullscreen: Rect? = nil // See floatingFullscreen.swift
 
     @MainActor
     init(id: UInt32, _ app: any AbstractApp, lastFloatingSize: CGSize?, parent: NonLeafTreeNodeObject, adaptiveWeight: CGFloat, index: Int) {

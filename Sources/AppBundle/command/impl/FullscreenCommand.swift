@@ -5,12 +5,13 @@ struct FullscreenCommand: Command {
     let args: FullscreenCmdArgs
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
-    func run(_ env: CmdEnv, _ io: CmdIo) -> BinaryExitCode {
+    func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
         guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
         if let window = target.windowOrNil, window.isLocked { return .fail(io.err(windowIsLockedMsg(window))) }
         guard let window = target.windowOrNil else {
             return .fail(io.err(noWindowIsFocused))
         }
+        if window.isFloating { return await toggleFloatingFullscreen(window, args, io) } // Fork addition
         let newState: Bool = switch args.toggle {
             case .on: true
             case .off: false
