@@ -26,7 +26,7 @@ func parseScratchpadAction(i: PosArgParserInput) -> ParsedCliArgs<ScratchpadActi
 }
 
 /// Accepts "62" and "62%"
-private func parsePercent(_ str: String) -> ResOrStr<Int> {
+func parsePercent(_ str: String) -> ResOrStr<Int> {
     let digits = str.hasSuffix("%") ? String(str.dropLast()) : str
     guard let value = Int(digits), (1 ... 100).contains(value) else { return .failure("'\(str)' is not a percent in 1...100") }
     return .success(value)

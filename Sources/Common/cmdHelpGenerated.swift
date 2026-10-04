@@ -139,6 +139,10 @@ let move_help_generated = """
                 [--boundaries-action <boundary-action>] [--fail-if-fullscreen]
                 [--fail-if-macos-native-fullscreen] (left|down|up|right)
     """
+let place_help_generated = """
+    USAGE: place [-h|--help] [--window-id <window-id>] [--width <size>] [--height <size>]
+                 (top-left|top-right|bottom-left|bottom-right|center)
+    """
 let reload_config_help_generated = """
     USAGE: reload-config [-h|--help] [--no-gui] [--dry-run] [--warnings-as-errors]
     """

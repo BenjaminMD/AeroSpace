@@ -72,6 +72,8 @@ aerospace -h;
     | move-workspace-to-monitor [--wrap-around] (left|down|up|right|next|prev) [--wrap-around]
     | move-workspace-to-monitor [--wrap-around] <monitor_pattern>... [--wrap-around]
 
+    | place [--window-id <window_id>] [--width <size>] [--height <size>] (top-left|top-right|bottom-left|bottom-right|center)
+
     | reload-config [--no-gui | --dry-run]...
 
     | resize [--window-id <window_id>] (smart|smart-opposite|width|height) [+|-]<number> [--window-id <window_id>]

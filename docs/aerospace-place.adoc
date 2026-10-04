@@ -1,0 +1,52 @@
+= aerospace-place(1)
+include::util/man-attributes.adoc[]
+:manname: aerospace-place
+// tag::purpose[]
+:manpurpose: Float a window and put it into a corner or the center of its monitor
+// end::purpose[]
+
+// =========================================================== Synopsis
+== Synopsis
+[verse]
+// tag::synopsis[]
+aerospace place [-h|--help] [--window-id <window-id>] [--width <size>] [--height <size>]
+                (top-left|top-right|bottom-left|bottom-right|center)
+
+// end::synopsis[]
+
+// =========================================================== Description
+== Description
+
+// tag::body[]
+{manpurpose}
+
+Tiled windows are made floating first.
+The window is placed inside the monitor's visible area minus the outer gaps.
+`<size>` is either points (`900`) or a percentage of the monitor (`30%`).
+Without `--width` / `--height`, the window keeps its current size.
+
+Handy in `on-window-detected` rules:
+
+[source,toml]
+----
+[[on-window-detected]]
+if.app-id = 'com.apple.Passwords'
+run = ['layout floating', 'sticky on', 'place top-left --width 900 --height 640']
+----
+
+// =========================================================== Options
+include::./util/conditional-options-header.adoc[]
+
+-h, --help:: Print help
+
+--window-id <window-id>::
+include::./util/window-id-flag-desc.adoc[]
+
+--width <size>:: Width in points, or in percent of the monitor (e.g. `30%`)
+
+--height <size>:: Height in points, or in percent of the monitor (e.g. `40%`)
+
+// end::body[]
+
+// =========================================================== Footer
+include::util/man-footer.adoc[]
