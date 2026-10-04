@@ -245,6 +245,13 @@ include::aerospace-run-callback.adoc[tags=synopsis]
 include::aerospace-run-callback.adoc[tags=purpose]
 include::aerospace-run-callback.adoc[tags=body]
 
+== scratchpad
+----
+include::aerospace-scratchpad.adoc[tags=synopsis]
+----
+include::aerospace-scratchpad.adoc[tags=purpose]
+include::aerospace-scratchpad.adoc[tags=body]
+
 == split
 ----
 include::aerospace-split.adoc[tags=synopsis]

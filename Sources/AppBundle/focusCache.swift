@@ -8,6 +8,7 @@
         return
     }
     if nativeFocused?.windowId != lastKnownNativeFocusedWindowId {
+        if let nativeFocused { pullScratchpadWindowIfNativelyFocused(nativeFocused) }
         _ = nativeFocused?.focusWindow()
         lastKnownNativeFocusedWindowId = nativeFocused?.windowId
     }

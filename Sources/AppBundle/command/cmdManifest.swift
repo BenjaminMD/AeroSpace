@@ -74,6 +74,8 @@ extension CmdArgs {
                 command = ResizeCommand(args: self as! ResizeCmdArgs)
             case .runCallback:
                 command = RunCallbackCommand(args: self as! RunCallbackCmdArgs)
+            case .scratchpad:
+                command = ScratchpadCommand(args: self as! ScratchpadCmdArgs)
             case .split:
                 command = SplitCommand(args: self as! SplitCmdArgs)
             case .subscribe:

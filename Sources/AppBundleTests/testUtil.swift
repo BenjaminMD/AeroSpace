@@ -40,6 +40,8 @@ func setUpWorkspacesForTests() {
     TestApp.shared.windows = []
 
     global_layoutForNextDetectedWindow = nil
+    revealedScratchpadWindowIds = []
+    scratchpadRevealFraction = CGSize(width: 0.62, height: 0.78)
 }
 
 extension ParsedCmd {

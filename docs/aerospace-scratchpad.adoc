@@ -1,0 +1,52 @@
+= aerospace-scratchpad(1)
+include::util/man-attributes.adoc[]
+:manname: aerospace-scratchpad
+// tag::purpose[]
+:manpurpose: Stash windows in a hidden scratchpad and toggle them back one at a time
+// end::purpose[]
+
+// =========================================================== Synopsis
+== Synopsis
+[verse]
+// tag::synopsis[]
+aerospace scratchpad [-h|--help] stash [--window-id <window-id>]
+aerospace scratchpad [-h|--help] toggle [--width <percent>] [--height <percent>]
+
+// end::synopsis[]
+
+// =========================================================== Description
+== Description
+
+// tag::body[]
+{manpurpose}
+
+Stashed windows live as floating windows in the hidden `.scratchpad` workspace.
+The workspace is never shown on a monitor and is skipped by `workspace next|prev`.
+
+`stash` moves the window to the scratchpad.
+
+`toggle` sends every revealed scratchpad window back and reveals the next stashed one on the focused workspace:
+floating, centered, and sized relative to the monitor.
+If the focused window is the only scratchpad window, it's just sent back (i3-like back and forth).
+
+A stashed window that gets focused from outside of AeroSpace (notification click, app launcher, `cmd-tab`)
+is pulled onto the focused workspace instead of switching to the hidden workspace.
+
+// =========================================================== Options
+include::./util/conditional-options-header.adoc[]
+
+-h, --help:: Print help
+
+--window-id <window-id>::
+include::./util/window-id-flag-desc.adoc[]
+
+--width <percent>:: Width of the revealed window relative to the monitor. Default: 62.
+The value is remembered for subsequent reveals.
+
+--height <percent>:: Height of the revealed window relative to the monitor. Default: 78.
+The value is remembered for subsequent reveals.
+
+// end::body[]
+
+// =========================================================== Footer
+include::util/man-footer.adoc[]
